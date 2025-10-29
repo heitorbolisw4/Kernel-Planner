@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kernel Planner - Organize seu tempo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header da aplicação -->
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">⚡ Kernel Planner</h1>
+            <nav class="nav">
+                <button class="btn-nav active" data-view="day">Dia</button>
+                <button class="btn-nav" data-view="week">Semana</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Controles principais -->
+    <section class="controls">
+        <div class="container">
+            <button class="btn-primary" id="btn-add-task">
+                + Nova Tarefa
+            </button>
+            <select class="filter-category" id="filter-category">
+                <option value="all">Todas as categorias</option>
+                <option value="work">Trabalho</option>
+                <option value="personal">Pessoal</option>
+                <option value="study">Estudos</option>
+                <option value="other">Outros</option>
+            </select>
+        </div>
+    </section>
+
+    <!-- Área de conteúdo principal -->
+    <main class="main-content">
+        <div class="container">
+            <!-- View do dia -->
+            <div id="view-day" class="view active">
+                <h2 class="view-title">Hoje</h2>
+                <div class="task-list" id="task-list-day">
+                    <!-- Tarefas serão inseridas aqui via JavaScript -->
+                </div>
+            </div>
+
+            <!-- View da semana -->
+            <div id="view-week" class="view">
+                <h2 class="view-title">Esta Semana</h2>
+                <div class="week-grid" id="week-grid">
+                    <!-- Grid semanal será gerado via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para adicionar/editar tarefa -->
+    <div class="modal" id="task-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Nova Tarefa</h3>
+                <button class="btn-close" id="btn-close-modal">&times;</button>
+            </div>
+            <form id="task-form" class="task-form">
+                <input type="hidden" id="task-id">
+                
+                <div class="form-group">
+                    <label for="task-title">Título</label>
+                    <input type="text" id="task-title" required placeholder="Ex: Reunião com cliente">
+                </div>
+
+                <div class="form-group">
+                    <label for="task-time">Horário</label>
+                    <input type="time" id="task-time" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="task-category">Categoria</label>
+                    <select id="task-category" required>
+                        <option value="work">Trabalho</option>
+                        <option value="personal">Pessoal</option>
+                        <option value="study">Estudos</option>
+                        <option value="other">Outros</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="task-priority">Prioridade</label>
+                    <select id="task-priority" required>
+                        <option value="low">Baixa</option>
+                        <option value="medium">Média</option>
+                        <option value="high">Alta</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="task-date">Data</label>
+                    <input type="date" id="task-date" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script principal -->
+    <script src="app.js"></script>
+</body>
+</html>
+
