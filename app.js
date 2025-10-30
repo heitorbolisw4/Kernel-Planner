@@ -11,26 +11,53 @@ const App = {
     tasks: [],
     currentView: 'day', // 'day' ou 'week'
     currentTask: null, // tarefa sendo editada
+    apiBaseUrl: window.__KERNEL_PLANNER_API__ || '',
     
     // Inicializar a aplicação
-    init() {
-        this.loadTasksFromStorage();
+    async init() {
         this.setupEventListeners();
-        this.render();
         this.setTodayAsDefault();
+        await this.loadTasks();
+        this.render();
     },
     
-    // Carregar tarefas do LocalStorage
-    loadTasksFromStorage() {
-        const stored = localStorage.getItem('kernel-planner-tasks');
-        if (stored) {
-            this.tasks = JSON.parse(stored);
+    getApiUrl(endpoint) {
+        const base = this.apiBaseUrl || '';
+        return `${base}${endpoint}`;
+    },
+    
+    cacheTasks() {
+        try {
+            localStorage.setItem('kernel-planner-cache', JSON.stringify(this.tasks));
+        } catch (err) {
+            console.warn('Não foi possível armazenar cache local das tarefas.', err);
         }
     },
     
-    // Salvar tarefas no LocalStorage
-    saveTasksToStorage() {
-        localStorage.setItem('kernel-planner-tasks', JSON.stringify(this.tasks));
+    loadTasksFromCache() {
+        try {
+            const stored = localStorage.getItem('kernel-planner-cache');
+            if (stored) {
+                this.tasks = JSON.parse(stored);
+            }
+        } catch (err) {
+            console.warn('Falha ao carregar cache local de tarefas.', err);
+        }
+    },
+    
+    // Carregar tarefas do servidor (com fallback para cache local)
+    async loadTasks() {
+        try {
+            const response = await fetch(this.getApiUrl('/api/tasks'));
+            if (!response.ok) {
+                throw new Error(`Falha ${response.status}`);
+            }
+            this.tasks = await response.json();
+            this.cacheTasks();
+        } catch (err) {
+            console.warn('Não foi possível carregar as tarefas do servidor. Usando cache local.', err);
+            this.loadTasksFromCache();
+        }
     },
     
     // Configurar todos os event listeners
@@ -58,9 +85,9 @@ const App = {
         });
         
         // Enviar formulário de tarefa
-        document.getElementById('task-form').addEventListener('submit', (e) => {
+        document.getElementById('task-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            this.saveTask();
+            await this.saveTask();
         });
         
         // Filtro de categoria
@@ -132,31 +159,59 @@ const App = {
     },
     
     // Salvar tarefa (criar ou atualizar)
-    saveTask() {
-        const formData = {
-            id: document.getElementById('task-id').value,
-            title: document.getElementById('task-title').value,
-            time: document.getElementById('task-time').value,
+    async saveTask() {
+        const id = document.getElementById('task-id').value;
+        const payload = {
+            title: document.getElementById('task-title').value.trim(),
+            time: document.getElementById('task-time').value || '09:00',
             category: document.getElementById('task-category').value,
             priority: document.getElementById('task-priority').value,
             date: document.getElementById('task-date').value,
         };
         
-        if (formData.id) {
-            // Atualizar tarefa existente
-            const index = this.tasks.findIndex(t => t.id === formData.id);
-            if (index !== -1) {
-                this.tasks[index] = formData;
-            }
-        } else {
-            // Criar nova tarefa
-            formData.id = Date.now().toString(); // ID simples
-            this.tasks.push(formData);
+        if (!payload.title) {
+            alert('Informe um título para a tarefa.');
+            return;
         }
         
-        this.saveTasksToStorage();
-        this.render();
-        this.closeTaskModal();
+        try {
+            let savedTask = null;
+            
+            if (id) {
+                const response = await fetch(this.getApiUrl(`/api/tasks/${id}`), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Falha ao atualizar tarefa');
+                }
+                
+                savedTask = await response.json();
+                this.tasks = this.tasks.map(t => t.id === savedTask.id ? savedTask : t);
+            } else {
+                const response = await fetch(this.getApiUrl('/api/tasks'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Falha ao criar tarefa');
+                }
+                
+                savedTask = await response.json();
+                this.tasks.push(savedTask);
+            }
+            
+            this.cacheTasks();
+            this.render();
+            this.closeTaskModal();
+        } catch (err) {
+            console.error(err);
+            alert('Não foi possível salvar a tarefa. Verifique sua conexão e tente novamente.');
+        }
     },
     
     // Editar tarefa
@@ -168,11 +223,26 @@ const App = {
     },
     
     // Deletar tarefa
-    deleteTask(taskId) {
-        if (confirm('Deseja realmente excluir esta tarefa?')) {
+    async deleteTask(taskId) {
+        if (!confirm('Deseja realmente excluir esta tarefa?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(this.getApiUrl(`/api/tasks/${taskId}`), {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok && response.status !== 204) {
+                throw new Error('Falha ao excluir tarefa');
+            }
+            
             this.tasks = this.tasks.filter(t => t.id !== taskId);
-            this.saveTasksToStorage();
+            this.cacheTasks();
             this.render();
+        } catch (err) {
+            console.error(err);
+            alert('Não foi possível excluir a tarefa. Verifique sua conexão e tente novamente.');
         }
     },
     
@@ -372,4 +442,3 @@ document.addEventListener('DOMContentLoaded', () => {
     App.init();
     console.log('⚡ Kernel Planner iniciado com sucesso!');
 });
-
